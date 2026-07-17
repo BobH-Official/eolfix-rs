@@ -78,11 +78,7 @@ fn parse_line_ending(s: &str) -> Result<LineEnding> {
 fn search_config_in_dir(dir: &Path) -> Option<PathBuf> {
     ALL_CONFIG_NAMES.iter().find_map(|name| {
         let path = dir.join(name);
-        if path.is_file() {
-            Some(path)
-        } else {
-            None
-        }
+        if path.is_file() { Some(path) } else { None }
     })
 }
 

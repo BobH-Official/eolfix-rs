@@ -10,7 +10,7 @@ use anyhow::Result;
 use clap::Parser;
 
 use crate::convert::convert_file;
-use crate::ignore::{should_skip_dir, should_skip_file, IgnoreFilter};
+use crate::ignore::{IgnoreFilter, should_skip_dir, should_skip_file};
 use crate::inspector::is_text;
 use crate::rules::Rules;
 

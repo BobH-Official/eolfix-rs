@@ -50,10 +50,10 @@ impl IgnoreFilter {
             }
         }
 
-        if let Some(ref gi) = self.gitignore {
-            if gi.matched(path, path.is_dir()).is_ignore() {
-                return true;
-            }
+        if let Some(ref gi) = self.gitignore
+            && gi.matched(path, path.is_dir()).is_ignore()
+        {
+            return true;
         }
 
         false
