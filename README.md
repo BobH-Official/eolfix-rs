@@ -299,6 +299,4 @@ patterns = ["*.sln", "*.vcxproj"] # only these get CRLF
 
 ## License
 
-## License
-
 This project is licensed under the Mozilla Public License 2.0. See [LICENSE](./LICENSE) for details.
