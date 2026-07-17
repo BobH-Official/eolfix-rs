@@ -1,10 +1,20 @@
 [package]
 name = "eolfix"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
-description = "Normalize line endings in a directory tree"
+description = "Normalize line endings in a directory tree using content-based text detection"
 license = "MPL-2.0"
 repository = "https://github.com/BobH-Official/eolfix-rs"
+readme = "README.md"
+keywords = ["eol", "line-endings", "newline", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+publish = ["crates-io"]
+include = [
+    "/LICENSE",
+    "/README.md",
+    "/eolfix.schema.json",
+    "/src/**",
+]
 
 [[bin]]
 name = "eolfix"
