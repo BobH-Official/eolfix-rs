@@ -1,4 +1,4 @@
-# No-Crlf
+# eolfix
 
 Normalize line endings in a directory tree. Converts `CRLF` (`\r\n`) and `CR` (`\r`) to `LF` (`\n`) for all text files, with explicit "force rules" for file types that **must** use a specific line ending (e.g. `.bat` requires CRLF).
 
@@ -22,7 +22,7 @@ Uses **content inspection** (not extensions) to tell text from binary, so it han
 ## Installation
 
 ```sh
-cargo install no-crlf
+cargo install eolfix
 # or download from releases
 ```
 
@@ -31,7 +31,7 @@ cargo install no-crlf
 ## Usage
 
 ```
-no-crlf [OPTIONS] [DIRECTORY]
+eolfix [OPTIONS] [DIRECTORY]
 
 Arguments:
   DIRECTORY            Directory to scan (default: current directory)
@@ -51,16 +51,16 @@ Options:
 
 ```sh
 # Scan current directory, fix all line endings
-no-crlf
+eolfix
 
 # Dry-run to see what would change
-no-crlf -n
+eolfix -n
 
 # Scan a specific directory
-no-crlf /path/to/project
+eolfix /path/to/project
 
 # Verbose dry-run
-no-crlf -vn /path/to/project
+eolfix -vn /path/to/project
 ```
 
 ---
@@ -207,7 +207,7 @@ paths = ["node_modules/", "target/", "dist/", "vendor/"]
 
 ## Why Not `.gitattributes`?
 
-`.gitattributes` controls line endings in Git's working tree. It doesn't fix existing files — it tells Git what to do on checkout/commit. `no-crlf` is a one-shot fixer: it converts what's already on disk, independent of Git.
+`.gitattributes` controls line endings in Git's working tree. It doesn't fix existing files — it tells Git what to do on checkout/commit. `eolfix` is a one-shot fixer: it converts what's already on disk, independent of Git.
 
 ---
 

@@ -1,5 +1,5 @@
 [package]
-name = "no-crlf"
+name = "eolfix"
 version = "0.1.0"
 edition = "2021"
 description = "Normalize line endings in a directory tree"
@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/BobH-Official/no-crlf"
 
 [[bin]]
-name = "no-crlf"
+name = "eolfix"
 path = "src/main.rs"
 
 [dependencies]

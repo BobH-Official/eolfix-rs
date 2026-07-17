@@ -15,7 +15,7 @@ use crate::inspector::is_text;
 use crate::rules::Rules;
 
 #[derive(Parser, Debug)]
-#[command(name = "no-crlf", version, about = "Normalize line endings in a directory tree")]
+#[command(name = "eolfix", version, about = "Normalize line endings in a directory tree")]
 struct Cli {
     #[arg(value_name = "DIRECTORY", default_value = ".")]
     directory: PathBuf,
