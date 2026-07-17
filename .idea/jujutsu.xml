@@ -4,10 +4,18 @@
     <option name="logWindows">
       <list>
         <LogWindowConfig>
+          <option name="columnWidths">
+            <map>
+              <entry key="author" value="80" />
+              <entry key="date" value="120" />
+              <entry key="graph" value="600" />
+            </map>
+          </option>
           <option name="id" value="default" />
           <option name="name" value="Jujutsu Log" />
         </LogWindowConfig>
       </list>
     </option>
+    <option name="settingsVersion" value="4" />
   </component>
 </project>
