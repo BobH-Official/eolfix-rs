@@ -99,11 +99,12 @@ If either check triggers, the file is skipped.
 
 ### 3. Determine target line ending
 
-For each text file, consult the "force rules" in order:
+For each text file, consult the rules in priority order:
 
-1. Match filename against `force_crlf` patterns → target = `CRLF`
-2. Match filename against `force_cr` patterns → target = `CR`
-3. Default → target = `LF`
+1. Match filename against `force_lf` patterns → target = `LF`
+2. Match filename against `force_crlf` patterns → target = `CRLF`
+3. Match filename against `force_cr` patterns → target = `CR`
+4. Fallback → target = configured `default` (defaults to `LF`)
 
 Force rules use **filename-only matching** (not full path) against glob patterns and extension lists.
 
@@ -130,12 +131,21 @@ Force rules use **filename-only matching** (not full path) against glob patterns
 
 ## Default Force Rules (hardcoded)
 
+### Force LF
+
+Files that **will break** with CRLF (shebang scripts, Makefiles):
+
+| Pattern | Reason |
+|---------|--------|
+| `*.sh`, `*.bash`, `*.zsh`, `*.fish`, `*.ksh` | Shell scripts — `\r` in shebang causes "bad interpreter" |
+| `*.mk`, `Makefile` | Makefiles — CRLF breaks tab-syntax parsing |
+
 ### Force CRLF
 
 Files that **will break** if they don't have `\r\n`:
 
-| Pattern / Extension | Reason |
-|---------------------|--------|
+| Pattern | Reason |
+|---------|--------|
 | `*.bat` | Windows batch — fails with bare LF |
 | `*.cmd` | Windows cmd script |
 
@@ -155,9 +165,17 @@ A [JSON Schema](./eolfix.schema.json) is provided for TOML validation. Add `"$sc
 # eolfix.toml
 "$schema" = "https://raw.githubusercontent.com/BobH-Official/eolfix/main/eolfix.schema.json"
 
+# Default target line ending (optional, defaults to "lf")
+default = "lf"
+
+[force_lf]
+patterns = ["*.sh", "*.bash", "*.zsh", "*.fish", "*.ksh", "*.mk", "Makefile"]
+extensions = []
+ignore_default = []
+
 [force_crlf]
 patterns = ["*.bat", "*.cmd"]
-extensions = [".sln", ".vcxproj"]
+extensions = []
 
 [force_cr]
 patterns = []
@@ -189,6 +207,10 @@ eolfix --format-config                 # print effective config as TOML
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `default` | `string` | Default target line ending: `"lf"`, `"crlf"`, or `"cr"` (default: `"lf"`) |
+| `force_lf.patterns` | `string[]` | Glob patterns matching filenames that **must** use LF |
+| `force_lf.extensions` | `string[]` | Extensions that **must** use LF (equivalent to `*.ext`) |
+| `force_lf.ignore_default` | `string[]` | Extensions to **remove** from hardcoded LF default list |
 | `force_crlf.patterns` | `string[]` | Glob patterns matching filenames that **must** use CRLF |
 | `force_crlf.extensions` | `string[]` | Extensions that **must** use CRLF (equivalent to `*.ext`) |
 | `force_crlf.ignore_default` | `string[]` | Extensions to **remove** from the hardcoded default list (e.g. `["bat"]` drops `*.bat`) |

@@ -29,8 +29,13 @@ pub struct IgnoreSection {
     pub paths: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RuleConfig {
+    #[serde(default = "default_default")]
+    pub default: String,
+
+    #[serde(default)]
+    pub force_lf: ForceRulesSection,
     #[serde(default)]
     pub force_crlf: ForceRulesSection,
     #[serde(default)]
@@ -39,17 +44,37 @@ pub struct RuleConfig {
     pub ignore: IgnoreSection,
 }
 
+fn default_default() -> String {
+    "lf".to_string()
+}
+
 #[derive(Debug, Clone)]
 pub struct Rules {
+    pub default_line_ending: LineEnding,
+    pub force_lf_patterns: Vec<String>,
     pub force_crlf_patterns: Vec<String>,
     pub force_cr_patterns: Vec<String>,
     pub ignore_patterns: Vec<String>,
     pub ignore_paths: Vec<String>,
 }
 
-const HARDCODED_FORCE_CRLF_EXTENSIONS: &[&str] = &["bat", "cmd"];
+const HARDCODED_FORCE_CRLF_PATTERNS: &[&str] = &["*.bat", "*.cmd"];
+
+const HARDCODED_FORCE_LF_PATTERNS: &[&str] = &[
+    "*.sh", "*.bash", "*.zsh", "*.fish", "*.ksh",
+    "*.mk", "Makefile",
+];
 
 const ALL_CONFIG_NAMES: &[&str] = &["eolfix.toml", ".eolfix.toml"];
+
+fn parse_line_ending(s: &str) -> Result<LineEnding> {
+    match s.to_lowercase().as_str() {
+        "lf" => Ok(LineEnding::LF),
+        "crlf" => Ok(LineEnding::CRLF),
+        "cr" => Ok(LineEnding::CR),
+        _ => anyhow::bail!("invalid line ending '{}': must be 'lf', 'crlf', or 'cr'", s),
+    }
+}
 
 fn search_config_in_dir(dir: &Path) -> Option<PathBuf> {
     ALL_CONFIG_NAMES.iter().find_map(|name| {
@@ -71,46 +96,67 @@ fn load_config_file(path: &Path) -> Result<RuleConfig> {
     Ok(toml::from_str(&content)?)
 }
 
+fn merge_rules_section(
+    defaults: &[&str],
+    config: &ForceRulesSection,
+    target: &mut Vec<String>,
+) {
+    target.extend(defaults.iter().map(|s| s.to_string()));
+
+    for ignore in &config.ignore_default {
+        let p = ignore.trim_start_matches('*').trim_start_matches('.');
+        let pattern = format!("*.{}", p);
+        target.retain(|x| x != &pattern && x != ignore);
+    }
+
+    target.extend(config.patterns.iter().cloned());
+    for ext in &config.extensions {
+        let ext = ext.trim_start_matches('.');
+        target.push(format!("*.{}", ext));
+    }
+}
+
 impl Rules {
     pub fn load(root_dir: &Path, config_path: Option<&Path>) -> Result<Self> {
-        let mut force_crlf_patterns: Vec<String> = HARDCODED_FORCE_CRLF_EXTENSIONS
-            .iter()
-            .map(|ext| format!("*.{}", ext))
-            .collect();
+        let mut force_lf_patterns: Vec<String> = Vec::new();
+        let mut force_crlf_patterns: Vec<String> = Vec::new();
         let mut force_cr_patterns: Vec<String> = Vec::new();
         let mut ignore_patterns: Vec<String> = Vec::new();
         let mut ignore_paths: Vec<String> = Vec::new();
 
+        let mut default = LineEnding::LF;
+
         if let Some(path) = resolve_config_path(root_dir, config_path) {
             let config = load_config_file(&path)?;
 
-            for ignore in &config.force_crlf.ignore_default {
-                let ext = ignore.trim_start_matches('*').trim_start_matches('.');
-                let pattern = format!("*.{}", ext);
-                force_crlf_patterns.retain(|p| p != &pattern);
-            }
-            force_crlf_patterns.extend(config.force_crlf.patterns);
-            for ext in &config.force_crlf.extensions {
-                let ext = ext.trim_start_matches('.');
-                force_crlf_patterns.push(format!("*.{}", ext));
-            }
+            default = parse_line_ending(&config.default)?;
 
-            for ignore in &config.force_cr.ignore_default {
-                let ext = ignore.trim_start_matches('*').trim_start_matches('.');
-                let pattern = format!("*.{}", ext);
-                force_cr_patterns.retain(|p| p != &pattern);
-            }
-            force_cr_patterns.extend(config.force_cr.patterns);
-            for ext in &config.force_cr.extensions {
-                let ext = ext.trim_start_matches('.');
-                force_cr_patterns.push(format!("*.{}", ext));
-            }
+            merge_rules_section(
+                HARDCODED_FORCE_LF_PATTERNS,
+                &config.force_lf,
+                &mut force_lf_patterns,
+            );
+            merge_rules_section(
+                HARDCODED_FORCE_CRLF_PATTERNS,
+                &config.force_crlf,
+                &mut force_crlf_patterns,
+            );
+            merge_rules_section(
+                &[],
+                &config.force_cr,
+                &mut force_cr_patterns,
+            );
 
             ignore_patterns.extend(config.ignore.patterns);
             ignore_paths.extend(config.ignore.paths);
+        } else {
+            force_lf_patterns.extend(HARDCODED_FORCE_LF_PATTERNS.iter().map(|s| s.to_string()));
+            force_crlf_patterns.extend(HARDCODED_FORCE_CRLF_PATTERNS.iter().map(|s| s.to_string()));
         }
 
         Ok(Rules {
+            default_line_ending: default,
+            force_lf_patterns,
             force_crlf_patterns,
             force_cr_patterns,
             ignore_patterns,
@@ -130,11 +176,13 @@ impl Rules {
         println!("config file: {}", path.display());
 
         let config = load_config_file(&path)?;
+        parse_line_ending(&config.default)?;
 
         for p in config
-            .force_crlf
+            .force_lf
             .patterns
             .iter()
+            .chain(&config.force_crlf.patterns)
             .chain(&config.force_cr.patterns)
             .chain(&config.ignore.patterns)
         {
@@ -147,27 +195,41 @@ impl Rules {
             }
         }
 
-        println!("config OK");
+        println!("config OK (default = {})", config.default);
         Ok(())
     }
 
     pub fn format_config(root_dir: &Path, config_path: Option<&Path>) -> Result<String> {
         let config = match resolve_config_path(root_dir, config_path) {
             Some(path) => load_config_file(&path)?,
-            None => RuleConfig::default(),
+            None => {
+                let mut c = RuleConfig {
+                    default: "lf".into(),
+                    force_lf: ForceRulesSection::default(),
+                    force_crlf: ForceRulesSection::default(),
+                    force_cr: ForceRulesSection::default(),
+                    ignore: IgnoreSection::default(),
+                };
+                c.force_lf.patterns = HARDCODED_FORCE_LF_PATTERNS.iter().map(|s| s.to_string()).collect();
+                c.force_crlf.patterns = HARDCODED_FORCE_CRLF_PATTERNS.iter().map(|s| s.to_string()).collect();
+                c
+            }
         };
 
         Ok(toml::to_string(&config)?)
     }
 
     pub fn determine_target(&self, filename: &str) -> LineEnding {
+        if matches_any_pattern(filename, &self.force_lf_patterns) {
+            return LineEnding::LF;
+        }
         if matches_any_pattern(filename, &self.force_crlf_patterns) {
             return LineEnding::CRLF;
         }
         if matches_any_pattern(filename, &self.force_cr_patterns) {
             return LineEnding::CR;
         }
-        LineEnding::LF
+        self.default_line_ending
     }
 
     pub fn is_ignored(&self, filename: &str) -> bool {
