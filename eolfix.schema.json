@@ -22,6 +22,11 @@
           "type": "array",
           "description": "File extensions that must use CRLF (e.g. '.sln').",
           "items": { "type": "string" }
+        },
+        "ignore_default": {
+          "type": "array",
+          "description": "Hardcoded extensions to remove from defaults (e.g. ['bat'] drops *.bat).",
+          "items": { "type": "string" }
         }
       }
     },
@@ -35,6 +40,11 @@
         },
         "extensions": {
           "type": "array",
+          "items": { "type": "string" }
+        },
+        "ignore_default": {
+          "type": "array",
+          "description": "Hardcoded extensions to remove from defaults.",
           "items": { "type": "string" }
         }
       }

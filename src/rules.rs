@@ -17,6 +17,8 @@ pub struct ForceRulesSection {
     pub patterns: Vec<String>,
     #[serde(default)]
     pub extensions: Vec<String>,
+    #[serde(default)]
+    pub ignore_default: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
@@ -82,12 +84,22 @@ impl Rules {
         if let Some(path) = resolve_config_path(root_dir, config_path) {
             let config = load_config_file(&path)?;
 
+            for ignore in &config.force_crlf.ignore_default {
+                let ext = ignore.trim_start_matches('*').trim_start_matches('.');
+                let pattern = format!("*.{}", ext);
+                force_crlf_patterns.retain(|p| p != &pattern);
+            }
             force_crlf_patterns.extend(config.force_crlf.patterns);
             for ext in &config.force_crlf.extensions {
                 let ext = ext.trim_start_matches('.');
                 force_crlf_patterns.push(format!("*.{}", ext));
             }
 
+            for ignore in &config.force_cr.ignore_default {
+                let ext = ignore.trim_start_matches('*').trim_start_matches('.');
+                let pattern = format!("*.{}", ext);
+                force_cr_patterns.retain(|p| p != &pattern);
+            }
             force_cr_patterns.extend(config.force_cr.patterns);
             for ext in &config.force_cr.extensions {
                 let ext = ext.trim_start_matches('.');

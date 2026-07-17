@@ -169,26 +169,6 @@ patterns = ["*.exe", "*.dll", "*.jpg", "*.png"]
 paths = ["node_modules/", "target/", "dist/", "vendor/"]
 ```
 
-Or as JSON (`eolfix.json`):
-
-```json
-{
-  "$schema": "https://raw.githubusercontent.com/BobH-Official/eolfix/main/eolfix.schema.json",
-  "force_crlf": {
-    "patterns": ["*.bat", "*.cmd"],
-    "extensions": [".sln", ".vcxproj"]
-  },
-  "force_cr": {
-    "patterns": [],
-    "extensions": []
-  },
-  "ignore": {
-    "patterns": ["*.exe", "*.dll", "*.jpg", "*.png"],
-    "paths": ["node_modules/", "target/", "dist/", "vendor/"]
-  }
-}
-```
-
 ### `--config` resolution
 
 | `--config` value | Behavior |
@@ -211,11 +191,18 @@ eolfix --format-config                 # print effective config as TOML
 |-------|------|-------------|
 | `force_crlf.patterns` | `string[]` | Glob patterns matching filenames that **must** use CRLF |
 | `force_crlf.extensions` | `string[]` | Extensions that **must** use CRLF (equivalent to `*.ext`) |
+| `force_crlf.ignore_default` | `string[]` | Extensions to **remove** from the hardcoded default list (e.g. `["bat"]` drops `*.bat`) |
 | `force_cr.*` | same | Same, for CR |
 | `ignore.patterns` | `string[]` | Glob patterns to skip entirely (matched against filename) |
 | `ignore.paths` | `string[]` | Directory patterns to skip (matched against relative path prefix) |
 
-**Merge behavior**: User config patterns/extensions are **appended** to the hardcoded list, not a replacement. To remove a hardcoded rule, the user would need to configure the list explicitly (future enhancement).
+**Merge behavior**: User config patterns/extensions are **appended** to the hardcoded list. Use `ignore_default` to remove specific hardcoded entries:
+
+```toml
+[force_crlf]
+ignore_default = ["bat", "cmd"]   # remove all built-in defaults
+patterns = ["*.sln", "*.vcxproj"] # only these get CRLF
+```
 
 ---
 
