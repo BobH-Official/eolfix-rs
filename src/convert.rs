@@ -27,8 +27,8 @@ pub fn normalize_line_endings(content: &[u8], target: LineEnding) -> Vec<u8> {
         }
         LineEnding::CR => {
             let step1 = replace_all(content, b"\r\n", b"\n");
-            let step2 = replace_all(&step1, b"\n", b"\r");
-            step2
+            let step2 = replace_all(&step1, b"\r", b"\n");
+            replace_all(&step2, b"\n", b"\r")
         }
     }
 }
