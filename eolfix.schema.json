@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/BobH-Official/eolfix/blob/main/eolfix.schema.json",
+  "$id": "https://github.com/BobH-Official/eolfix-rs/blob/main/eolfix.schema.json",
   "title": "eolfix Configuration",
   "description": "Line ending normalization rules for eolfix.",
   "type": "object",

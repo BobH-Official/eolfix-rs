@@ -163,7 +163,7 @@ A [JSON Schema](./eolfix.schema.json) is provided for TOML validation. Add `"$sc
 
 ```toml
 # eolfix.toml
-"$schema" = "https://raw.githubusercontent.com/BobH-Official/eolfix/main/eolfix.schema.json"
+"$schema" = "https://raw.githubusercontent.com/BobH-Official/eolfix-rs/refs/heads/master/eolfix.schema.json"
 
 # Default target line ending (optional, defaults to "lf")
 default = "lf"
