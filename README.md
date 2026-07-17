@@ -11,11 +11,11 @@ Uses **content inspection** (not extensions) to tell text from binary, so it han
 - Recursive directory scanning (current dir or explicit path)
 - Content-based text/binary detection — no reliance on file extensions
 - Default conversion target: `LF`
-- Force rules: certain file types (`.bat`, `.cmd`, `.ps1`, etc.) always get `CRLF` even if they currently have `LF`
+- Force rules: certain file types (`.bat`, `.cmd`) always get `CRLF` even if they currently have `LF`
 - Respects `.gitignore` rules (skips ignored files and directories)
 - Always skips the `.git` directory
 - Dry-run mode to preview changes without modifying files
-- Configurable via `crlf-rules.toml`
+- Configurable via `eolfix.toml` (or `.eolfix.toml`), with JSON Schema validation and built-in check/format commands
 
 ---
 
@@ -42,7 +42,9 @@ Options:
   -q, --quiet          Suppress non-error output
       --no-recursive   Only process top-level directory
       --no-gitignore   Ignore .gitignore files
-      --config <PATH>  Path to custom rule config file
+      --config <PATH>  Path to config file or directory containing config
+      --check-config   Validate config file and exit
+      --format-config  Print effective config as TOML and exit
       --help           Print help
       --version        Print version
 ```
@@ -61,6 +63,13 @@ eolfix /path/to/project
 
 # Verbose dry-run
 eolfix -vn /path/to/project
+
+# Validate config file
+eolfix --check-config
+eolfix --check-config --config ~/.config/eolfix/
+
+# Print effective config as TOML
+eolfix --format-config
 ```
 
 ---
@@ -129,9 +138,6 @@ Files that **will break** if they don't have `\r\n`:
 |---------------------|--------|
 | `*.bat` | Windows batch — fails with bare LF |
 | `*.cmd` | Windows cmd script |
-| `*.ps1` | PowerShell script |
-| `*.psm1` | PowerShell module |
-| `*.psd1` | PowerShell data file |
 
 ### Force CR
 
@@ -139,15 +145,18 @@ No built-in defaults. Legacy Mac (pre-OS X) used `\r`. Users can add via config.
 
 ---
 
-## Configuration: `crlf-rules.toml`
+## Configuration: `eolfix.toml`
 
-Place in the scanned directory root. Overrides/extend built-in defaults.
+Place in the scanned directory root (as `eolfix.toml` or `.eolfix.toml`), or pass via `--config <PATH>` (supports a directory or a file). Overrides/extend built-in defaults.
+
+A [JSON Schema](./eolfix.schema.json) is provided for TOML validation. Add `"$schema"` to your config to enable IDE autocompletion and validation:
 
 ```toml
-# These MERGE with (don't replace) hardcoded defaults
+# eolfix.toml
+"$schema" = "https://raw.githubusercontent.com/BobH-Official/eolfix/main/eolfix.schema.json"
 
 [force_crlf]
-patterns = ["*.bat", "*.cmd", "*.ps1", "*.psm1", "*.psd1"]
+patterns = ["*.bat", "*.cmd"]
 extensions = [".sln", ".vcxproj"]
 
 [force_cr]
@@ -158,6 +167,44 @@ extensions = []
 # Additional ignore patterns (on top of .gitignore)
 patterns = ["*.exe", "*.dll", "*.jpg", "*.png"]
 paths = ["node_modules/", "target/", "dist/", "vendor/"]
+```
+
+Or as JSON (`eolfix.json`):
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/BobH-Official/eolfix/main/eolfix.schema.json",
+  "force_crlf": {
+    "patterns": ["*.bat", "*.cmd"],
+    "extensions": [".sln", ".vcxproj"]
+  },
+  "force_cr": {
+    "patterns": [],
+    "extensions": []
+  },
+  "ignore": {
+    "patterns": ["*.exe", "*.dll", "*.jpg", "*.png"],
+    "paths": ["node_modules/", "target/", "dist/", "vendor/"]
+  }
+}
+```
+
+### `--config` resolution
+
+| `--config` value | Behavior |
+|------------------|----------|
+| Not provided | Search scanned directory for `eolfix.toml` → `.eolfix.toml` |
+| A directory path | Search that directory for `eolfix.toml` → `.eolfix.toml` |
+| A file path | Load that file directly |
+
+### `--check-config` / `--format-config`
+
+Use these to validate or inspect config before running:
+
+```sh
+eolfix --check-config                  # validate auto-discovered config
+eolfix --check-config --config ./dir/  # validate config in directory
+eolfix --format-config                 # print effective config as TOML
 ```
 
 | Field | Type | Description |

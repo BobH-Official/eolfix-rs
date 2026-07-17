@@ -35,8 +35,14 @@ struct Cli {
     #[arg(long, help = "Ignore .gitignore files")]
     no_gitignore: bool,
 
-    #[arg(long = "config", value_name = "PATH", help = "Path to custom rule config file")]
+    #[arg(long = "config", value_name = "PATH", help = "Path to config file (eolfix.toml) or directory containing one")]
     config: Option<PathBuf>,
+
+    #[arg(long, help = "Validate config file and exit")]
+    check_config: bool,
+
+    #[arg(long, help = "Print effective config as TOML and exit")]
+    format_config: bool,
 }
 
 fn main() {
@@ -58,7 +64,18 @@ fn run() -> Result<()> {
         anyhow::bail!("not a directory: {}", root.display());
     }
 
-    let rules = Rules::load(cli.config.as_deref())?;
+    if cli.check_config {
+        Rules::check_config(&root, cli.config.as_deref())?;
+        return Ok(());
+    }
+
+    if cli.format_config {
+        let formatted = Rules::format_config(&root, cli.config.as_deref())?;
+        print!("{}", formatted);
+        return Ok(());
+    }
+
+    let rules = Rules::load(&root, cli.config.as_deref())?;
 
     let ignore_filter = IgnoreFilter::new(!cli.no_gitignore, &root, rules.ignore_paths.clone())?;
 

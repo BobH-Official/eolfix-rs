@@ -1,7 +1,8 @@
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Result;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineEnding {
@@ -10,7 +11,7 @@ pub enum LineEnding {
     CR,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct ForceRulesSection {
     #[serde(default)]
     pub patterns: Vec<String>,
@@ -18,7 +19,7 @@ pub struct ForceRulesSection {
     pub extensions: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct IgnoreSection {
     #[serde(default)]
     pub patterns: Vec<String>,
@@ -26,7 +27,7 @@ pub struct IgnoreSection {
     pub paths: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct RuleConfig {
     #[serde(default)]
     pub force_crlf: ForceRulesSection,
@@ -44,10 +45,32 @@ pub struct Rules {
     pub ignore_paths: Vec<String>,
 }
 
-const HARDCODED_FORCE_CRLF_EXTENSIONS: &[&str] = &["bat", "cmd", "ps1", "psm1", "psd1"];
+const HARDCODED_FORCE_CRLF_EXTENSIONS: &[&str] = &["bat", "cmd"];
+
+const ALL_CONFIG_NAMES: &[&str] = &["eolfix.toml", ".eolfix.toml"];
+
+fn search_config_in_dir(dir: &Path) -> Option<PathBuf> {
+    ALL_CONFIG_NAMES.iter().find_map(|name| {
+        let path = dir.join(name);
+        if path.is_file() { Some(path) } else { None }
+    })
+}
+
+pub fn resolve_config_path(root_dir: &Path, user_path: Option<&Path>) -> Option<PathBuf> {
+    match user_path {
+        Some(p) if p.is_dir() => search_config_in_dir(p),
+        Some(p) => Some(p.to_path_buf()),
+        None => search_config_in_dir(root_dir),
+    }
+}
+
+fn load_config_file(path: &Path) -> Result<RuleConfig> {
+    let content = std::fs::read_to_string(path)?;
+    Ok(toml::from_str(&content)?)
+}
 
 impl Rules {
-    pub fn load(config_path: Option<&Path>) -> Result<Self> {
+    pub fn load(root_dir: &Path, config_path: Option<&Path>) -> Result<Self> {
         let mut force_crlf_patterns: Vec<String> = HARDCODED_FORCE_CRLF_EXTENSIONS
             .iter()
             .map(|ext| format!("*.{}", ext))
@@ -56,9 +79,8 @@ impl Rules {
         let mut ignore_patterns: Vec<String> = Vec::new();
         let mut ignore_paths: Vec<String> = Vec::new();
 
-        if let Some(path) = config_path {
-            let content = std::fs::read_to_string(path)?;
-            let config: RuleConfig = toml::from_str(&content)?;
+        if let Some(path) = resolve_config_path(root_dir, config_path) {
+            let config = load_config_file(&path)?;
 
             force_crlf_patterns.extend(config.force_crlf.patterns);
             for ext in &config.force_crlf.extensions {
@@ -82,6 +104,48 @@ impl Rules {
             ignore_patterns,
             ignore_paths,
         })
+    }
+
+    pub fn check_config(root_dir: &Path, config_path: Option<&Path>) -> Result<()> {
+        let path = match resolve_config_path(root_dir, config_path) {
+            Some(p) => p,
+            None => {
+                println!("no config file found (eolfix.toml / .eolfix.toml), using defaults");
+                return Ok(());
+            }
+        };
+
+        println!("config file: {}", path.display());
+
+        let config = load_config_file(&path)?;
+
+        for p in config
+            .force_crlf
+            .patterns
+            .iter()
+            .chain(&config.force_cr.patterns)
+            .chain(&config.ignore.patterns)
+        {
+            glob::Pattern::new(p).map_err(|e| anyhow::anyhow!("invalid glob pattern '{}': {}", p, e))?;
+        }
+
+        for p in &config.ignore.paths {
+            if p.is_empty() {
+                anyhow::bail!("ignore.paths contains an empty string");
+            }
+        }
+
+        println!("config OK");
+        Ok(())
+    }
+
+    pub fn format_config(root_dir: &Path, config_path: Option<&Path>) -> Result<String> {
+        let config = match resolve_config_path(root_dir, config_path) {
+            Some(path) => load_config_file(&path)?,
+            None => RuleConfig::default(),
+        };
+
+        Ok(toml::to_string(&config)?)
     }
 
     pub fn determine_target(&self, filename: &str) -> LineEnding {

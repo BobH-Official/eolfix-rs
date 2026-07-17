@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/BobH-Official/eolfix/blob/main/eolfix.schema.json",
+  "title": "eolfix Configuration",
+  "description": "Line ending normalization rules for eolfix.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for IDE validation."
+    },
+    "force_crlf": {
+      "description": "Files that must use CRLF line endings.",
+      "type": "object",
+      "properties": {
+        "patterns": {
+          "type": "array",
+          "description": "Glob patterns matching filenames (e.g. '*.bat').",
+          "items": { "type": "string" }
+        },
+        "extensions": {
+          "type": "array",
+          "description": "File extensions that must use CRLF (e.g. '.sln').",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "force_cr": {
+      "description": "Files that must use CR line endings (legacy Mac).",
+      "type": "object",
+      "properties": {
+        "patterns": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "extensions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "ignore": {
+      "description": "Files and directories to skip entirely.",
+      "type": "object",
+      "properties": {
+        "patterns": {
+          "type": "array",
+          "description": "Glob patterns matched against filename.",
+          "items": { "type": "string" }
+        },
+        "paths": {
+          "type": "array",
+          "description": "Directory path prefixes to skip (e.g. 'node_modules/').",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
