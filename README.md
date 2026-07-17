@@ -114,11 +114,34 @@ Force rules use **filename-only matching** (not full path) against glob patterns
 
 ### 4. Convert
 
-- Read the **entire file** into memory
-- Normalize all line endings to the target:
-  - `\r\n` → `\n`, then `\n` → `\r\n` (if CRLF target)
-  - `\r` → `\n`, then `\n` → `\r` (if CR target)
-  - `\r\n` → `\n`, `\r` → `\n` (if LF target)
+Strategy: **normalize everything to LF first, then convert to target if needed**.
+
+**Phase 1 — normalize to LF** (order matters):
+
+| Step | From | To | Reason |
+|------|------|----|--------|
+| 1 | `\r\n` | `\n` | Replace 2-byte CRLF first, so `\r` inside CRLF isn't caught by step 2 |
+| 2 | `\r` | `\n` | Replace remaining standalone CR (legacy Mac) |
+
+After phase 1, every line ending in the file is `\n`.
+
+**Phase 2 — convert to target**:
+
+| Target | From | To |
+|--------|------|----|
+| LF | (done) | — |
+| CRLF | `\n` | `\r\n` |
+| CR | `\n` | `\r` |
+
+**Mixed line endings**: If a file contains a mix of `\r\n`, `\r`, and `\n`, phase 1 normalizes all of them to `\n`. Then phase 2 converts to the uniform target. Example:
+
+```
+Original (mixed):  line1\r\nline2\rline3\nline4
+Phase 1 (step 1):  line1\nline2\rline3\nline4    (CRLF → LF)
+Phase 1 (step 2):  line1\nline2\nline3\nline4    (remaining CR → LF)
+Phase 2 (CRLF):    line1\r\nline2\r\nline3\r\nline4
+```
+
 - If the content is unchanged, skip the write
 - Write atomically (write to temp file, then rename) to avoid corruption on interruption
 
@@ -240,7 +263,7 @@ patterns = ["*.sln", "*.vcxproj"] # only these get CRLF
 |----------|----------|
 | Empty file (0 bytes) | Skip — nothing to convert |
 | File with only one line (no newline at EOF) | Leave as-is (no line ending to convert) |
-| File with mixed line endings (`\r\n` and `\r` and `\n`) | Normalize all to target line ending |
+| File with mixed line endings (`\r\n` + `\r` + `\n`) | Normalize all to uniform target: `\r\n` → `\n`, `\r` → `\n`, then `\n` → target ending |
 | Very large file (> 100 MB) | Warn on stderr, still process |
 | Permission denied (can't read) | Warn on stderr, skip |
 | File locked (can't write) | Warn on stderr, skip |
@@ -276,4 +299,4 @@ patterns = ["*.sln", "*.vcxproj"] # only these get CRLF
 
 ## License
 
-MIT
+MPL-2.0
