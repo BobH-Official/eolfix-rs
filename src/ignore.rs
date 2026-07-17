@@ -18,10 +18,7 @@ impl IgnoreFilter {
                 builder.add(gitignore_path);
             }
             let _ = builder.add(root_dir.join(".git/info/exclude"));
-            match builder.build() {
-                Ok(gi) => Some(gi),
-                Err(_) => None,
-            }
+            builder.build().ok()
         } else {
             None
         };
@@ -46,7 +43,7 @@ impl IgnoreFilter {
         for p in &self.ignore_paths {
             let normalized = p.replace('\\', "/");
             let rel_str = relative.to_string_lossy().replace('\\', "/");
-            if rel_str.starts_with(&normalized.trim_end_matches('/'))
+            if rel_str.starts_with(normalized.trim_end_matches('/'))
                 || rel_str == normalized.trim_end_matches('/')
             {
                 return true;
@@ -54,10 +51,7 @@ impl IgnoreFilter {
         }
 
         if let Some(ref gi) = self.gitignore {
-            if gi
-                .matched(path, path.is_dir())
-                .is_ignore()
-            {
+            if gi.matched(path, path.is_dir()).is_ignore() {
                 return true;
             }
         }
@@ -67,9 +61,7 @@ impl IgnoreFilter {
 }
 
 pub fn is_git_dir(path: &Path) -> bool {
-    path.file_name()
-        .map(|n| n == ".git")
-        .unwrap_or(false)
+    path.file_name().map(|n| n == ".git").unwrap_or(false)
 }
 
 pub fn is_symlink(path: &Path) -> bool {
@@ -80,11 +72,7 @@ pub fn should_skip_dir(path: &Path) -> bool {
     is_git_dir(path)
 }
 
-pub fn should_skip_file(
-    root: &Path,
-    path: &Path,
-    filter: &IgnoreFilter,
-) -> bool {
+pub fn should_skip_file(root: &Path, path: &Path, filter: &IgnoreFilter) -> bool {
     if is_symlink(path) {
         return true;
     }

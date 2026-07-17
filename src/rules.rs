@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LineEnding {
-    LF,
-    CRLF,
-    CR,
+    Lf,
+    Crlf,
+    Cr,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
@@ -61,17 +61,16 @@ pub struct Rules {
 const HARDCODED_FORCE_CRLF_PATTERNS: &[&str] = &["*.bat", "*.cmd"];
 
 const HARDCODED_FORCE_LF_PATTERNS: &[&str] = &[
-    "*.sh", "*.bash", "*.zsh", "*.fish", "*.ksh",
-    "*.mk", "Makefile",
+    "*.sh", "*.bash", "*.zsh", "*.fish", "*.ksh", "*.mk", "Makefile",
 ];
 
 const ALL_CONFIG_NAMES: &[&str] = &["eolfix.toml", ".eolfix.toml"];
 
 fn parse_line_ending(s: &str) -> Result<LineEnding> {
     match s.to_lowercase().as_str() {
-        "lf" => Ok(LineEnding::LF),
-        "crlf" => Ok(LineEnding::CRLF),
-        "cr" => Ok(LineEnding::CR),
+        "lf" => Ok(LineEnding::Lf),
+        "crlf" => Ok(LineEnding::Crlf),
+        "cr" => Ok(LineEnding::Cr),
         _ => anyhow::bail!("invalid line ending '{}': must be 'lf', 'crlf', or 'cr'", s),
     }
 }
@@ -79,7 +78,11 @@ fn parse_line_ending(s: &str) -> Result<LineEnding> {
 fn search_config_in_dir(dir: &Path) -> Option<PathBuf> {
     ALL_CONFIG_NAMES.iter().find_map(|name| {
         let path = dir.join(name);
-        if path.is_file() { Some(path) } else { None }
+        if path.is_file() {
+            Some(path)
+        } else {
+            None
+        }
     })
 }
 
@@ -96,11 +99,7 @@ fn load_config_file(path: &Path) -> Result<RuleConfig> {
     Ok(toml::from_str(&content)?)
 }
 
-fn merge_rules_section(
-    defaults: &[&str],
-    config: &ForceRulesSection,
-    target: &mut Vec<String>,
-) {
+fn merge_rules_section(defaults: &[&str], config: &ForceRulesSection, target: &mut Vec<String>) {
     target.extend(defaults.iter().map(|s| s.to_string()));
 
     for ignore in &config.ignore_default {
@@ -124,7 +123,7 @@ impl Rules {
         let mut ignore_patterns: Vec<String> = Vec::new();
         let mut ignore_paths: Vec<String> = Vec::new();
 
-        let mut default = LineEnding::LF;
+        let mut default = LineEnding::Lf;
 
         if let Some(path) = resolve_config_path(root_dir, config_path) {
             let config = load_config_file(&path)?;
@@ -141,11 +140,7 @@ impl Rules {
                 &config.force_crlf,
                 &mut force_crlf_patterns,
             );
-            merge_rules_section(
-                &[],
-                &config.force_cr,
-                &mut force_cr_patterns,
-            );
+            merge_rules_section(&[], &config.force_cr, &mut force_cr_patterns);
 
             ignore_patterns.extend(config.ignore.patterns);
             ignore_paths.extend(config.ignore.paths);
@@ -186,7 +181,8 @@ impl Rules {
             .chain(&config.force_cr.patterns)
             .chain(&config.ignore.patterns)
         {
-            glob::Pattern::new(p).map_err(|e| anyhow::anyhow!("invalid glob pattern '{}': {}", p, e))?;
+            glob::Pattern::new(p)
+                .map_err(|e| anyhow::anyhow!("invalid glob pattern '{}': {}", p, e))?;
         }
 
         for p in &config.ignore.paths {
@@ -210,8 +206,14 @@ impl Rules {
                     force_cr: ForceRulesSection::default(),
                     ignore: IgnoreSection::default(),
                 };
-                c.force_lf.patterns = HARDCODED_FORCE_LF_PATTERNS.iter().map(|s| s.to_string()).collect();
-                c.force_crlf.patterns = HARDCODED_FORCE_CRLF_PATTERNS.iter().map(|s| s.to_string()).collect();
+                c.force_lf.patterns = HARDCODED_FORCE_LF_PATTERNS
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect();
+                c.force_crlf.patterns = HARDCODED_FORCE_CRLF_PATTERNS
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect();
                 c
             }
         };
@@ -221,13 +223,13 @@ impl Rules {
 
     pub fn determine_target(&self, filename: &str) -> LineEnding {
         if matches_any_pattern(filename, &self.force_lf_patterns) {
-            return LineEnding::LF;
+            return LineEnding::Lf;
         }
         if matches_any_pattern(filename, &self.force_crlf_patterns) {
-            return LineEnding::CRLF;
+            return LineEnding::Crlf;
         }
         if matches_any_pattern(filename, &self.force_cr_patterns) {
-            return LineEnding::CR;
+            return LineEnding::Cr;
         }
         self.default_line_ending
     }

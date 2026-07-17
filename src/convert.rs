@@ -16,16 +16,16 @@ pub struct ConvertResult {
 
 pub fn normalize_line_endings(content: &[u8], target: LineEnding) -> Vec<u8> {
     match target {
-        LineEnding::LF => {
+        LineEnding::Lf => {
             let step1 = replace_all(content, b"\r\n", b"\n");
             replace_all(&step1, b"\r", b"\n")
         }
-        LineEnding::CRLF => {
+        LineEnding::Crlf => {
             let step1 = replace_all(content, b"\r\n", b"\n");
             let step2 = replace_all(&step1, b"\r", b"\n");
             replace_all(&step2, b"\n", b"\r\n")
         }
-        LineEnding::CR => {
+        LineEnding::Cr => {
             let step1 = replace_all(content, b"\r\n", b"\n");
             let step2 = replace_all(&step1, b"\r", b"\n");
             replace_all(&step2, b"\n", b"\r")

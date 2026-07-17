@@ -15,7 +15,11 @@ use crate::inspector::is_text;
 use crate::rules::Rules;
 
 #[derive(Parser, Debug)]
-#[command(name = "eolfix", version, about = "Normalize line endings in a directory tree")]
+#[command(
+    name = "eolfix",
+    version,
+    about = "Normalize line endings in a directory tree"
+)]
 struct Cli {
     #[arg(value_name = "DIRECTORY", default_value = ".")]
     directory: PathBuf,
@@ -35,7 +39,11 @@ struct Cli {
     #[arg(long, help = "Ignore .gitignore files")]
     no_gitignore: bool,
 
-    #[arg(long = "config", value_name = "PATH", help = "Path to config file (eolfix.toml) or directory containing one")]
+    #[arg(
+        long = "config",
+        value_name = "PATH",
+        help = "Path to config file (eolfix.toml) or directory containing one"
+    )]
     config: Option<PathBuf>,
 
     #[arg(long, help = "Validate config file and exit")]
@@ -134,9 +142,9 @@ fn run() -> Result<()> {
 
         match convert_file(&path, target, cli.dry_run) {
             Ok(result) => {
-                if result.error.is_some() {
+                if let Some(ref err) = result.error {
                     if !cli.quiet {
-                        eprintln!("error: {}: {}", path.display(), result.error.unwrap());
+                        eprintln!("error: {}: {}", path.display(), err);
                     }
                     error_count += 1;
                 } else if result.skipped {
