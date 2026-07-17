@@ -3,7 +3,7 @@ name = "eolfix"
 version = "0.1.0"
 edition = "2021"
 description = "Normalize line endings in a directory tree"
-license = "MIT"
+license = "MPL-2.0"
 repository = "https://github.com/BobH-Official/no-crlf"
 
 [[bin]]
