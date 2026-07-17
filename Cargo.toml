@@ -1,7 +1,7 @@
 [package]
 name = "eolfix"
 version = "0.0.1"
-edition = "2021"
+edition = "2024"
 description = "Normalize line endings in a directory tree using content-based text detection"
 license = "MPL-2.0"
 repository = "https://github.com/BobH-Official/eolfix-rs"
