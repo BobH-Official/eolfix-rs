@@ -1,6 +1,6 @@
 # eolfix
 
-Normalize line endings in a directory tree. Converts `CRLF` (`\r\n`) and `CR` (`\r`) to `LF` (`\n`) for all text files, with explicit "force rules" for file types that **must** use a specific line ending (e.g. `.bat` requires CRLF).
+Normalize line endings in a directory tree. Converts between `LF` (`\n`), `CRLF` (`\r\n`), and `CR` (`\r`), with force rules for file types that **must** use a specific line ending (e.g. `*.bat` → CRLF, `*.sh` → LF). The default target is configurable.
 
 Uses **content inspection** (not extensions) to tell text from binary, so it handles files with no extension, ambiguous extensions (`.ts` = TypeScript or MPEG transport stream), and arbitrary filenames correctly.
 
@@ -10,12 +10,16 @@ Uses **content inspection** (not extensions) to tell text from binary, so it han
 
 - Recursive directory scanning (current dir or explicit path)
 - Content-based text/binary detection — no reliance on file extensions
-- Default conversion target: `LF`
-- Force rules: certain file types (`.bat`, `.cmd`) always get `CRLF` even if they currently have `LF`
+- Configurable default target: `LF` (change to `CRLF` or `CR` via `default` in config)
+- Force rules for all three line endings:
+  - `force_lf` — files that **must** be LF (shell scripts, Makefiles)
+  - `force_crlf` — files that **must** be CRLF (batch/cmd scripts)
+  - `force_cr` — files that **must** be CR (legacy Mac)
 - Respects `.gitignore` rules (skips ignored files and directories)
 - Always skips the `.git` directory
 - Dry-run mode to preview changes without modifying files
-- Configurable via `eolfix.toml` (or `.eolfix.toml`), with JSON Schema validation and built-in check/format commands
+- Configurable via `eolfix.toml` (or `.eolfix.toml`), with JSON Schema validation
+- Built-in `--check-config` and `--format-config` commands
 
 ---
 
@@ -163,7 +167,7 @@ A [JSON Schema](./eolfix.schema.json) is provided for TOML validation. Add `"$sc
 
 ```toml
 # eolfix.toml
-"$schema" = "https://raw.githubusercontent.com/BobH-Official/eolfix-rs/refs/heads/master/eolfix.schema.json"
+"$schema" = "https://raw.githubusercontent.com/BobH-Official/eolfix-rs/refs/heads/main/eolfix.schema.json"
 
 # Default target line ending (optional, defaults to "lf")
 default = "lf"
@@ -176,10 +180,12 @@ ignore_default = []
 [force_crlf]
 patterns = ["*.bat", "*.cmd"]
 extensions = []
+ignore_default = []
 
 [force_cr]
 patterns = []
 extensions = []
+ignore_default = []
 
 [ignore]
 # Additional ignore patterns (on top of .gitignore)
@@ -254,7 +260,8 @@ patterns = ["*.sln", "*.vcxproj"] # only these get CRLF
 | `clap` (derive) | CLI argument parsing |
 | `walkdir` | Recursive directory walking |
 | `ignore` | `.gitignore` parsing and matching (from ripgrep) |
-| `toml` | Config file parsing |
+| `toml` | Config file parsing and serialization |
+| `serde` | Config struct derive macros |
 | `glob` | Pattern matching for force rules |
 | `tempfile` | Atomic write via temp file + rename |
 | `anyhow` | Error handling ergonomics |
